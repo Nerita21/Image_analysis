@@ -1,0 +1,5 @@
+data:
+  nd2_images_dir: data/images/nd2
+  tiff_images_dir: data/images/tiff
+  raw_images_dir: data/images/raw
+  csv_dir: data/csv
