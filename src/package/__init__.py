@@ -1,2 +1,2 @@
 from .nd_to_tiff import convert_nd2_to_tiff
-from .tiff_viewer import view_tiff_directory 
+from .tiff_viewer import view_tiff_directory, view_masks_napari 

@@ -70,3 +70,25 @@ def view_tiff_directory(tiff_dir: Path, group_channels: bool = True) -> None:
                 viewer.add_image(img, name=f.stem)
 
     napari.run()
+
+def view_masks_napari(tiff_dir: Path, mask_suffix: str = "_mask", channel_axis: int = 0) -> None:
+    """
+    View mask TIFF images in Napari.
+
+    Args:
+        tiff_dir (Path): Directory containing mask .tiff files.
+        mask_suffix (str): Suffix indicating mask files.
+        channel_axis (int): Axis representing channels in multi-channel masks.
+    """
+    tiff_files = sorted(tiff_dir.glob(f"*{mask_suffix}.tiff"))
+    if not tiff_files:
+        print(f"No mask TIFF files found in {tiff_dir} with suffix {mask_suffix}")
+        return
+
+    viewer = napari.Viewer()
+
+    for f in tiff_files:
+        img = tifffile.imread(f)
+        viewer.add_image(img, name=f.stem, channel_axis=channel_axis)
+
+    napari.run()
