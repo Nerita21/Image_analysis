@@ -1,5 +1,6 @@
 data:
   nd2_images_dir: data/images/nd2
   tiff_images_dir: data/images/tiff
-  raw_images_dir: data/images/raw
+  raw_images_dir: data/training/raw/imagepool
+  raw_tiff_images_dir: data/training/raw/tiff
   csv_dir: data/csv
