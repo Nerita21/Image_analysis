@@ -11,7 +11,7 @@ def create_masks(tiff_dir: Path, model: models.CellposeModel, channel: str | Non
     Args:
         tiff_dir (Path): Directory containing TIFF files to process.
         model (models.CellposeModel): Pre-initialized Cellpose model.
-        channel (str, optional): String pattern to match channel name (e.g., 'DAPI').
+        channel (str, optional): String pattern to match channel name (e.g., 'DAPI' or 'ch1').
                                  If None, all TIFF files in the directory are processed.
     """
     # Select files depending on whether a channel name is provided
@@ -34,9 +34,13 @@ def create_masks(tiff_dir: Path, model: models.CellposeModel, channel: str | Non
         print(f"Processing {tiff_file.name}...")
         image = tifffile.imread(tiff_file)
 
-        # Run Cellpose model
-        masks = model.eval(image, diameter=None, flow_threshold=None)
+        # Call the Cellpose model and unpack the results
+        # model.eval returns (masks, flows, styles, diams)
+        masks, _, _, _ = model.eval(image, diameter=None, channels=[channel, 0])
 
-        # Save mask
+        # Define output path for the mask
+        mask_file = tiff_dir / f"{tiff_file.stem}_mask.tiff"
+
+        # Save mask (ensure masks is a numpy array before casting type)
         tifffile.imwrite(mask_file, masks.astype(np.uint16))
         print(f"Saved mask to {mask_file.relative_to(tiff_dir)}")
