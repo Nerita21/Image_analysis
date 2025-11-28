@@ -36,7 +36,7 @@ def create_masks(tiff_dir: Path, model: models.CellposeModel, channel: str | Non
 
         # Call the Cellpose model and unpack the results
         # model.eval returns (masks, flows, styles, diams)
-        masks, _, _, _ = model.eval(image, diameter=None, channels=[channel, 0])
+        masks = model.eval(image, diameter=None)
 
         # Define output path for the mask
         mask_file = tiff_dir / f"{tiff_file.stem}_mask.tiff"
@@ -44,3 +44,5 @@ def create_masks(tiff_dir: Path, model: models.CellposeModel, channel: str | Non
         # Save mask (ensure masks is a numpy array before casting type)
         tifffile.imwrite(mask_file, masks.astype(np.uint16))
         print(f"Saved mask to {mask_file.relative_to(tiff_dir)}")
+
+        
