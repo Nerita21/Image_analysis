@@ -4,4 +4,6 @@ data:
   raw_images_dir: data/training/raw/imagepool
   raw_tiff_images_dir: data/training/raw/tiff
   raw_masks_dir: data/training/raw/cytochannel
+  corrected_masks_dir: data/training/corrected_cyto
+  sample_images_dir: data/images/masks
   csv_dir: data/csv

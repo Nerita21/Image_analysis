@@ -71,24 +71,35 @@ def view_tiff_directory(tiff_dir: Path, group_channels: bool = True) -> None:
 
     napari.run()
 
-def view_masks_napari(tiff_dir: Path, mask_suffix: str = "_mask", channel_axis: int = 0) -> None:
+def view_masks_napari(mask_dir: Path, tiff_dir: Path, mask_suffix: str = "_mask") -> None:
     """
-    View mask TIFF images in Napari.
+    View raw TIFFs + mask TIFFs in Napari.
+    Mask files end with `_mask.tiff` and raw files do NOT have the suffix.
+    """
 
-    Args:
-        tiff_dir (Path): Directory containing mask .tiff files.
-        mask_suffix (str): Suffix indicating mask files.
-        channel_axis (int): Axis representing channels in multi-channel masks.
-    """
-    tiff_files = sorted(tiff_dir.glob(f"*{mask_suffix}.tiff"))
-    if not tiff_files:
-        print(f"No mask TIFF files found in {tiff_dir} with suffix {mask_suffix}")
+    mask_files = sorted(mask_dir.glob(f"*{mask_suffix}.tiff"))
+    if not mask_files:
+        print(f"No mask TIFF files found in {mask_dir} with suffix {mask_suffix}")
         return
 
     viewer = napari.Viewer()
 
-    for f in tiff_files:
-        img = tifffile.imread(f)
-        viewer.add_image(img, name=f.stem, channel_axis=channel_axis)
+    for mask_file in mask_files:
+        # Example: "sample1_mask" → "sample1"
+        base = mask_file.stem.replace(mask_suffix, "")
+
+        # Raw TIFF with same base name
+        raw_file = tiff_dir / f"{base}.tiff"
+        if not raw_file.exists():
+            print(f"No raw TIFF found for mask {mask_file.name}")
+            continue
+
+        # Load both images
+        mask = tifffile.imread(mask_file)
+        raw = tifffile.imread(raw_file)
+
+        # Add to Napari
+        viewer.add_image(raw, name=f"{base}_raw")
+        viewer.add_labels(mask, name=f"{base}_mask")
 
     napari.run()

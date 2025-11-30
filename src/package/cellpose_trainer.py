@@ -1,17 +1,14 @@
-"""
-Train a Cellpose model on your corrected masks.
-"""
+# Train a Cellpose model on your corrected masks.
 
 from pathlib import Path
 import numpy as np
 import tifffile
 from cellpose import models, io
-from utils import load_config
 
 def train_cellpose_model(
     image_dir: Path,
     mask_dir: Path,
-    model_name: str = "my_cellpose_model",
+    model_name: str = "custom_cellpose_model",
     channels: list = [1, 2],  # [cyto_channel, nuc_channel]
     n_epochs: int = 100,
     learning_rate: float = 0.1,
@@ -22,7 +19,7 @@ def train_cellpose_model(
 
     Args:
         image_dir (Path): Directory containing training images (.tiff files)
-        mask_dir (Path): Directory containing corrected masks (*_mask.tiff files)
+        mask_dir (Path): Directory containing corrected masks (*_masks.tiff files)
         model_name (str): Name for your trained model (saved to models/model_name)
         channels (list): [cyto_channel, nuclear_channel] (typically [1, 2])
                         Set to [0, 0] for single-channel training
@@ -32,16 +29,10 @@ def train_cellpose_model(
 
     Returns:
         CellposeModel: The trained model object
-
-    Example:
-        >>> config, base_dir = load_config()
-        >>> img_dir = base_dir / config["data"]["raw_tiff_images_dir"]
-        >>> mask_dir = base_dir / config["data"]["raw_masks_dir"]
-        >>> model = train_cellpose_model(img_dir, mask_dir, channels=[1, 0])
     """
     # Load image and mask files
     image_paths = sorted(image_dir.glob("*ch1.tiff"))  # Adjust channel as needed
-    mask_paths = sorted(mask_dir.glob("*_mask.tiff"))
+    mask_paths = sorted(mask_dir.glob("*_masks.tiff"))
 
     if not image_paths or not mask_paths:
         raise FileNotFoundError(
@@ -67,7 +58,7 @@ def train_cellpose_model(
 
     model = models.CellposeModel(
         gpu=True,
-        pretrained_model='cyto',  # Start from pretrained cyto model
+        pretrained_model='cpsam',  # Start from pretrained cyto model
         model_type=None,  # Will use the pretrained model
     )
 
@@ -85,24 +76,3 @@ def train_cellpose_model(
     print(f" Model trained and saved to: {new_model_path}")
     return model
 
-
-if __name__ == "__main__":
-    # Load config
-    config, base_dir = load_config()
-
-    # Paths
-    image_dir = base_dir / config["data"]["raw_tiff_images_dir"]
-    mask_dir = base_dir / config["data"]["raw_masks_dir"]
-
-    # Train model
-    try:
-        model = train_cellpose_model(
-            image_dir=image_dir,
-            mask_dir=mask_dir,
-            model_name="pvt1_cyto_model",
-            channels=[1, 0],  # Only cyto channel (single channel)
-            n_epochs=100,
-        )
-        print("\n Training complete!")
-    except Exception as e:
-        print(f"\n Training failed: {e}")
