@@ -5,5 +5,7 @@ data:
   raw_tiff_images_dir: data/training/raw/tiff
   raw_masks_dir: data/training/raw/cytochannel
   corrected_masks_dir: data/training/corrected_cyto
-  sample_images_dir: data/images/masks
+  sample_masks_dir: data/images/masks
+  sample_tiff_masks_dir: data/images/tiff
   csv_dir: data/csv
+  plot_dir: data/plots
