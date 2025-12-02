@@ -31,8 +31,11 @@ def train_cellpose_model(
         CellposeModel: The trained model object
     """
     # Load image and mask files
-    image_paths = sorted(image_dir.glob("*ch1.tiff"))  # Adjust channel as needed
-    mask_paths = sorted(mask_dir.glob("*_masks.tiff"))
+    image_paths = get_image_paths(image_dir, channels)
+    mask_paths = sorted(
+    list(mask_dir.glob("*_masks.tiff")) +
+    list(mask_dir.glob("*_masks.tif"))
+)
 
     if not image_paths or not mask_paths:
         raise FileNotFoundError(
@@ -76,3 +79,28 @@ def train_cellpose_model(
     print(f" Model trained and saved to: {new_model_path}")
     return model
 
+def get_image_paths(image_dir: Path, channels: list):
+    """Return image paths depending on channel selection."""
+
+    # normalize channels (remove zeros)
+    channels = [c for c in channels if c > 0]
+
+    # CASE 1: two channels → load both ch1 and ch2
+    if len(channels) == 2 and set(channels) == {1, 2}:
+        patterns = ["*ch1.tif", "*ch1.tiff", "*ch2.tif", "*ch2.tiff"]
+
+    # CASE 2: single channel → load only that channel
+    elif len(channels) == 1:
+        ch = channels[0]
+        patterns = [f"*ch{ch}.tif", f"*ch{ch}.tiff"]
+
+    # CASE 3: channels=[0,0] → load all tifs
+    else:
+        patterns = ["*.tif", "*.tiff"]
+
+    # Glob all patterns
+    files = []
+    for pat in patterns:
+        files += list(image_dir.glob(pat))
+
+    return sorted(files)
