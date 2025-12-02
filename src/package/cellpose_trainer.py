@@ -65,10 +65,10 @@ def train_cellpose_model(
         model_type=None,  # Will use the pretrained model
     )
 
-    # Train the model
-    new_model_path = model.train(
-        images,
-        masks,
+    # Train the model (new version)
+    new_model_path = model.cp.train(
+        images=images,
+        labels=masks,
         channels=channels,
         n_epochs=n_epochs,
         learning_rate=learning_rate,
