@@ -3,16 +3,17 @@
 from pathlib import Path
 import numpy as np
 import tifffile
-from cellpose import models, io
+from cellpose import models, io, train
 
 def train_cellpose_model(
     image_dir: Path,
     mask_dir: Path,
+    test_dir: Path = None,
     model_name: str = "custom_cellpose_model",
     channels: list = [1, 2],  # [cyto_channel, nuc_channel]
     n_epochs: int = 100,
-    learning_rate: float = 0.1,
-    batch_size: int = 8,
+    learning_rate: float = 1e-5,
+    batch_size: int = 1,
 ) -> models.CellposeModel:
     """
     Train a Cellpose model using corrected segmentation masks.
@@ -33,9 +34,21 @@ def train_cellpose_model(
     # Load image and mask files
     image_paths = get_image_paths(image_dir, channels)
     mask_paths = sorted(
-    list(mask_dir.glob("*_masks.tiff")) +
-    list(mask_dir.glob("*_masks.tif"))
-)
+        list(mask_dir.glob("*_masks.tiff")) +
+        list(mask_dir.glob("*_masks.tif"))
+    )
+    
+    if len(channels) == 1:
+        ch_pattern = f"*ch{channels[0]}*"
+    else:
+        ch_pattern = "*"
+
+    if len(channels) == 1 or set(channels) == {2}:
+        train_channels = [0,0]
+    else:
+        train_channels = channels
+
+
 
     if not image_paths or not mask_paths:
         raise FileNotFoundError(
@@ -48,35 +61,46 @@ def train_cellpose_model(
         print(f"Warning: {len(image_paths)} images but {len(mask_paths)} masks")
 
     # Load images and masks into memory
-    images = [tifffile.imread(p) for p in image_paths]
-    masks = [tifffile.imread(p) for p in mask_paths]
-
-    print(f" Loaded {len(images)} images and {len(masks)} masks")
-    print(f"  Sample image shape: {images[0].shape}")
-    print(f"  Sample mask shape: {masks[0].shape}")
+    # images = [tifffile.imread(p) for p in image_paths]
+    # masks = [tifffile.imread(p) for p in mask_paths]
 
     # Initialize model (use existing Cellpose model as base)
     print(f"\nTraining Cellpose model '{model_name}'...")
     print(f"  Epochs: {n_epochs}, LR: {learning_rate}, Batch size: {batch_size}")
 
+    io.logger_setup()
+
+    output = io.load_train_test_data(
+        train_dir=image_dir,
+        test_dir=test_dir,
+        image_filter= ch_pattern,
+        mask_filter="_masks",
+        look_one_level_down=False
+    )
+
+    images, labels, _, test_images, test_labels, _ = output
+
     model = models.CellposeModel(
         gpu=True,
-        pretrained_model='cpsam',  # Start from pretrained cyto model
+        pretrained_model='cpsam', 
         model_type=None,  # Will use the pretrained model
     )
 
     # Train the model (new version)
-    new_model_path = model.cp.train(
-        images=images,
-        labels=masks,
-        channels=channels,
-        n_epochs=n_epochs,
+    model_path, train_losses, test_losses = train.train_seg(
+        model.net,
+        train_data=images,
+        train_labels=labels,
+        test_data=test_images,
+        test_labels=test_labels,
         learning_rate=learning_rate,
-        batch_size=batch_size,
-        model_name=model_name,
+        weight_decay=0.1,
+        channels=train_channels,
+        n_epochs=n_epochs,
+        model_name=model_name
     )
 
-    print(f" Model trained and saved to: {new_model_path}")
+    print(f" Model trained and saved to: {model_path}")
     return model
 
 def get_image_paths(image_dir: Path, channels: list):
