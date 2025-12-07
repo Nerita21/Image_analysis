@@ -424,4 +424,4 @@ dependencies:
   - zlib-ng=2.0.7
   - zstandard=0.25.0
   - zstd=1.5.7
-prefix: /home/rita/miniconda3/envs/pyimage
+

@@ -202,6 +202,7 @@ def extract_intensity_batch(
         pd.DataFrame: Results table with all measurements
     """
     results = []
+    granule_records = []
     
     if mask_dir is None:
         mask_dir = image_dir
@@ -277,6 +278,17 @@ def extract_intensity_batch(
                     signal_channel=ch1,  # ch1 is the green channel with signal
                 )
 
+                # Expand granule list into separate rows
+                for g in meas["granule_list"]:
+                    granule_records.append({
+                        "sample_name": sample_name,
+                        "image_name": base_name,
+                        "granule_id": g["granule_id"],
+                        "granule_intensity_mean": g["intensity_mean"],
+                        "granule_intensity_max": g["intensity_max"],
+                        "granule_pixel_count": g["pixel_count"],
+                    })
+
                 # Flatten for CSV (sample_name is the subfolder, base_name is the image within)
                 row = {"sample_name": sample_name, "image_name": base_name, **meas}
                 results.append(row)
@@ -296,7 +308,20 @@ def extract_intensity_batch(
     df.to_csv(output_csv, index=False)
     print(f"\n✓ Results saved to {output_csv}")
 
-    return df
+    if not granule_records:
+        print("⚠ No granules found! Check your directories and file names.")
+        return pd.DataFrame()
+
+    # Save per-granule CSV
+    if granule_records:
+        granule_df = pd.DataFrame(granule_records)
+        granule_csv = output_csv.with_name(output_csv.stem + "_granules.csv")
+        granule_df.to_csv(granule_csv, index=False)
+        print(f"✓ Granule-level data saved to {granule_csv}")
+    else:
+        print("⚠ No granules found in any images.")
+
+    return df, granule_df
 
 def process_image_batch(
     image_dir: Path,
