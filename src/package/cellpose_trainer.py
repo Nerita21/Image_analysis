@@ -71,9 +71,9 @@ def train_cellpose_model(
     io.logger_setup()
 
     output = io.load_train_test_data(
-        train_dir=image_dir,
-        test_dir=test_dir,
-        image_filter= ch_pattern,
+        train_dir=str(image_dir),
+        test_dir=str(test_dir) if test_dir else None,
+        image_filter=ch_pattern,
         mask_filter="_masks",
         look_one_level_down=False
     )
