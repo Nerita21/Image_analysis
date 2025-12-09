@@ -39,9 +39,9 @@ def train_cellpose_model(
     )
     
     if len(channels) == 1:
-        ch_pattern = f"*ch{channels[0]}*"
+        ch_pattern = f"ch{channels[0]}"
     else:
-        ch_pattern = "*ch*"
+        ch_pattern = "ch"
 
     if len(channels) == 1 or set(channels) == {2}:
         train_channels = [0,0]
