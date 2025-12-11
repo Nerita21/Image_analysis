@@ -35,7 +35,9 @@ def train_cellpose_model(
     image_paths = get_image_paths(image_dir, channels)
     mask_paths = sorted(
         list(mask_dir.glob("*_masks.tiff")) +
-        list(mask_dir.glob("*_masks.tif"))
+        list(mask_dir.glob("*_masks.tif")) +
+        list(mask_dir.glob("*_mask.tiff")) +
+        list(mask_dir.glob("*_mask.tif"))
     )
     
     if len(channels) == 1:
@@ -50,9 +52,13 @@ def train_cellpose_model(
 
 
 
-    if not image_paths or not mask_paths:
+    if not image_paths:
         raise FileNotFoundError(
             f"Images: {len(image_paths)} found in {image_dir}\n"
+        )
+    
+    if not mask_paths:
+        raise FileNotFoundError(
             f"Masks: {len(mask_paths)} found in {mask_dir}"
         )
 
@@ -70,11 +76,12 @@ def train_cellpose_model(
 
     io.logger_setup()
 
+    # Use mask_filter '_mask' so both '*_mask' and '*_masks' are matched
     output = io.load_train_test_data(
         train_dir=str(image_dir),
         test_dir=str(test_dir) if test_dir else None,
         image_filter=ch_pattern,
-        mask_filter="_masks",
+        mask_filter="_mask",
         look_one_level_down=False
     )
 
