@@ -89,10 +89,10 @@ def train_cellpose_model(
         look_one_level_down = False
 
     output = io.load_train_test_data(
-        train_dir=train_dir_for_loader,
+        train_dir=mask_dir,
         test_dir=str(test_dir) if test_dir else None,
         image_filter=ch_pattern,
-        mask_filter="_mask",
+        mask_filter="_masks",
         look_one_level_down=look_one_level_down
     )
     print(f"Training directory: {image_dir} or path: {image_paths}")
