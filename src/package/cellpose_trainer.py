@@ -84,6 +84,7 @@ def train_cellpose_model(
         mask_filter="_mask",
         look_one_level_down=False
     )
+    print(f"Training directory: {image_dir} or path: {image_paths}")
 
     images, labels, _, test_images, test_labels, _ = output
 
