@@ -70,7 +70,7 @@ def create_flows(mask_folder_path):
         print(f"Processing: {mask_file.name}")
 
         # Load mask
-        mask = utils.imread(mask_file)
+        mask = tifffile.imread(mask_file)
         mask_int = mask.astype(np.int32)
 
         # Compute flows
