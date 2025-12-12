@@ -74,7 +74,7 @@ def create_flows(mask_folder_path):
         mask_int = mask.astype(np.int32)
 
         # Compute flows
-        flows = dynamics.compute_flows(mask_int)
+        flows = dynamics.labels_to_flows(mask_int)
 
         # Save output as .npy
         out_path = mask_file.with_suffix(".npy")  # e.g., image_mask.tif → image_mask.npy

@@ -76,26 +76,16 @@ def train_cellpose_model(
 
     io.logger_setup()
 
-    # Use mask_filter '_mask' so both '*_mask' and '*_masks' are matched
-    # If masks are stored in a separate sibling folder (common in Colab/Drive layouts),
-    # call load_train_test_data on the parent directory and allow it to look one
-    # level down so it can find images in e.g. './tiff' and masks in './training_material'.
-    # Otherwise, call it directly on the provided image_dir.
-    if mask_dir is not None and mask_dir.parent == image_dir.parent and mask_dir != image_dir:
-        train_dir_for_loader = str(image_dir.parent)
-        look_one_level_down = True
-    else:
-        train_dir_for_loader = str(image_dir)
-        look_one_level_down = False
+    train_dir = str(image_dir.parent)
 
     output = io.load_train_test_data(
-        train_dir=mask_dir,
+        train_dir=train_dir,
         test_dir=str(test_dir) if test_dir else None,
         image_filter=ch_pattern,
-        mask_filter="_masks",
-        look_one_level_down=look_one_level_down
+        mask_filter="_mask",   # matches *_mask*, *_masks*
+        look_one_level_down=True
     )
-    print(f"Training directory: {image_dir} or path: {image_paths}")
+    print(f"Cellpose loader training directory: {train_dir}")
 
     images, labels, _, test_images, test_labels, _ = output
 
