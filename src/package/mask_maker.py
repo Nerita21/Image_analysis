@@ -56,7 +56,12 @@ def create_flows(mask_folder_path):
     mask_folder_path = Path(mask_folder_path)
 
     # Find all mask files
-    mask_files = list(mask_folder_path.glob("*_mask*.tif"))
+    mask_files = (
+        list(mask_folder_path.glob("*_mask.tif"))  +
+        list(mask_folder_path.glob("*_mask.tiff")) +
+        list(mask_folder_path.glob("*_masks.tif")) +
+        list(mask_folder_path.glob("*_masks.tiff"))
+    )
 
     if len(mask_files) == 0:
         raise FileNotFoundError(f"No mask images found in: {mask_folder_path}")
