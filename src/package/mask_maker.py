@@ -1,7 +1,7 @@
 from pathlib import Path
 import tifffile
 import numpy as np
-from cellpose import models
+from cellpose import models, utils, dynamics
 
 def create_masks(tiff_dir: Path, model: models.CellposeModel, channel: str | None = None) -> None:
     """
@@ -44,4 +44,35 @@ def create_masks(tiff_dir: Path, model: models.CellposeModel, channel: str | Non
         tifffile.imwrite(mask_file, masks.astype(np.uint16))
         print(f"Saved mask to {mask_file.relative_to(tiff_dir)}")
 
-        
+def create_flows(mask_folder_path):
+    """
+    Loads mask files from a folder, computes Cellpose flows, 
+    and saves them as .npy files next to each mask.
+
+    Args:
+        mask_folder_path (str or Path): folder containing *_mask.tif images
+    """
+
+    mask_folder_path = Path(mask_folder_path)
+
+    # Find all mask files
+    mask_files = list(mask_folder_path.glob("*_mask*.tif"))
+
+    if len(mask_files) == 0:
+        raise FileNotFoundError(f"No mask images found in: {mask_folder_path}")
+
+    for mask_file in mask_files:
+        print(f"Processing: {mask_file.name}")
+
+        # Load mask
+        mask = utils.imread(mask_file)
+        mask_int = mask.astype(np.int32)
+
+        # Compute flows
+        flows = dynamics.compute_flows(mask_int)
+
+        # Save output as .npy
+        out_path = mask_file.with_suffix(".npy")  # e.g., image_mask.tif → image_mask.npy
+        np.save(out_path, {"masks": mask_int, "flows": flows})
+
+        print(f"Saved: {out_path}")
