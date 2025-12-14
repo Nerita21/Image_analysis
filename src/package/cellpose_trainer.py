@@ -81,9 +81,7 @@ def train_cellpose_model(
 
     train_channel = [0, 0] if channels == [0, 0] else channels
 
-    # For single channel, channel_axis should be None
-    channel_axis_param = None if channels == [0, 0] else train_channel
-
+   
     # Train the model (new version)
     model_path, train_losses, test_losses = train.train_seg(
         model.net,
@@ -93,7 +91,6 @@ def train_cellpose_model(
         test_labels=test_labels,
         learning_rate=learning_rate,
         weight_decay=0.1,
-        channel_axis=channel_axis_param,
         batch_size=batch_size,
         n_epochs=n_epochs,
         model_name=model_name
