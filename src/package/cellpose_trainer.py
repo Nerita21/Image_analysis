@@ -10,7 +10,8 @@ def train_cellpose_model(
     mask_dir: Path,
     test_dir: Path = None,
     model_name: str = "custom_cellpose_model",
-    channels: list = [1, 2],  # [cyto_channel, nuc_channel]
+    channels: list = [0, 0],  # [cyto_channel, nuc_channel]
+    channel_id: str = None,
     n_epochs: int = 100,
     learning_rate: float = 1e-5,
     batch_size: int = 1,
@@ -32,7 +33,7 @@ def train_cellpose_model(
         CellposeModel: The trained model object
     """
     # Load image and mask files
-    image_paths = get_image_paths(image_dir, channels)
+    image_paths = get_image_paths(image_dir, channel_id)
     mask_paths = sorted(
         list(mask_dir.glob("*_masks.tiff")) +
         list(mask_dir.glob("*_masks.tif")) +
@@ -40,17 +41,6 @@ def train_cellpose_model(
         list(mask_dir.glob("*_mask.tif"))
     )
     
-    if len(channels) == 1:
-        ch_pattern = f"ch{channels[0]}"
-    else:
-        ch_pattern = "ch"
-
-    if len(channels) == 1 or set(channels) == {2}:
-        train_channels = [0,0]
-    else:
-        train_channels = channels
-
-
 
     if not image_paths:
         raise FileNotFoundError(
@@ -67,38 +57,12 @@ def train_cellpose_model(
         print(f"Warning: {len(image_paths)} images but {len(mask_paths)} masks")
 
     # Load images and masks into memory
-    # images = [tifffile.imread(p) for p in image_paths]
-    # masks = [tifffile.imread(p) for p in mask_paths]
-
-    # Initialize model (use existing Cellpose model as base)
-    print(f"\nTraining Cellpose model '{model_name}'...")
-    print(f"  Epochs: {n_epochs}, LR: {learning_rate}, Batch size: {batch_size}")
-
-    io.logger_setup()
-
-    train_dir = str(image_dir.parent)
-    test_dir = str(test_dir) if test_dir else None
-
-    print(f"Attempting to load data from train_dir: {train_dir}, test_dir: {test_dir}")
-    print(f"image_filter: {ch_pattern}, mask_filter: _masks, look_one_level_down: True")
-
-    try:
-        output = io.load_train_test_data(
-            train_dir=train_dir,
-            test_dir= test_dir,
-            image_filter=ch_pattern,
-            mask_filter="_masks",   # exact match for *_masks* files
-            look_one_level_down=True
-        )
-        print("load_train_test_data succeeded")
-    except Exception as e:
-        print(f"load_train_test_data failed with error: {e}")
-        print("Check directory structure and file naming.")
-        raise
-
-    print(f"Cellpose loader training directory: {train_dir}")
-
-    images, labels, _, test_images, test_labels, _ = output
+    images, labels, test_images, test_labels = load_paired_images_and_masks(
+        image_paths,
+        mask_paths,
+        test_dir=test_dir,
+        channels=channels,
+    )
 
     print(f"Loaded {len(images)} training images and {len(labels)} training labels")
     if not labels:
@@ -123,7 +87,8 @@ def train_cellpose_model(
         test_labels=test_labels,
         learning_rate=learning_rate,
         weight_decay=0.1,
-        channels=train_channels,
+        channels=channels,
+        batch_size=batch_size,
         n_epochs=n_epochs,
         model_name=model_name
     )
@@ -131,28 +96,117 @@ def train_cellpose_model(
     print(f" Model trained and saved to: {model_path}")
     return model
 
-def get_image_paths(image_dir: Path, channels: list):
-    """Return image paths depending on channel selection."""
+def get_image_paths(image_dir: Path, channel_id: str = None):
+    """
+    Return image paths filtered by channel identifier in filename.
 
-    # normalize channels (remove zeros)
-    channels = [c for c in channels if c > 0]
+    Examples:
+        channel_id="ch2"  -> *_ch2.tif*
+        channel_id="bz"   -> *bz*.tif*
+        channel_id=None   -> all .tif/.tiff files
+    """
 
-    # CASE 1: two channels → load both ch1 and ch2
-    if len(channels) == 2 and set(channels) == {1, 2}:
-        patterns = ["*ch1.tif", "*ch1.tiff", "*ch2.tif", "*ch2.tiff"]
-
-    # CASE 2: single channel → load only that channel
-    elif len(channels) == 1:
-        ch = channels[0]
-        patterns = [f"*ch{ch}.tif", f"*ch{ch}.tiff"]
-
-    # CASE 3: channels=[0,0] → load all tifs
+    if channel_id:
+        patterns = [
+            f"*{channel_id}*.tif",
+            f"*{channel_id}*.tiff",
+        ]
     else:
         patterns = ["*.tif", "*.tiff"]
 
-    # Glob all patterns
     files = []
     for pat in patterns:
-        files += list(image_dir.glob(pat))
+        files.extend(image_dir.glob(pat))
 
     return sorted(files)
+
+
+def load_paired_images_and_masks(
+    image_paths,
+    mask_paths,
+    test_dir=None,
+    channel_id=None,
+):
+    """
+    Load images and their corresponding masks into memory by matching filenames.
+
+    Parameters
+    ----------
+    image_paths : list[Path]
+        List of image file paths.
+    mask_paths : list[Path]
+        List of mask file paths.
+    test_dir : str or Path, optional
+        Directory containing test images and masks.
+    channels : list, optional
+        Channel identifiers used by get_image_paths() for test data.
+
+    Returns
+    -------
+    images : list[np.ndarray]
+        Paired training images.
+    labels : list[np.ndarray]
+        Paired training masks.
+    test_images : list[np.ndarray]
+        Paired test images (empty if test_dir not provided).
+    test_labels : list[np.ndarray]
+        Paired test masks (empty if test_dir not provided).
+    """
+
+    images = []
+    labels = []
+    paired_count = 0
+
+    # ---- Load training images and masks ----
+    for img_path in image_paths:
+        base = img_path.stem
+        mask_path = None
+
+        for m_path in mask_paths:
+            m_base = m_path.stem.replace('_masks', '').replace('_mask', '')
+            if m_base == base:
+                mask_path = m_path
+                break
+
+        if mask_path:
+            images.append(tifffile.imread(img_path))
+            labels.append(tifffile.imread(mask_path))
+            paired_count += 1
+        else:
+            print(f"Warning: No matching mask for image {img_path.name}")
+
+    print(
+        f"Paired {paired_count} image-mask pairs out of "
+        f"{len(image_paths)} images and {len(mask_paths)} masks"
+    )
+
+    if not images or not labels:
+        raise ValueError("No paired image-mask data found. Check naming conventions.")
+
+    # ---- Load test images and masks (optional) ----
+    test_images = []
+    test_labels = []
+
+    if test_dir and Path(test_dir).exists():
+        test_dir = Path(test_dir)
+
+        test_image_paths = get_image_paths(test_dir, channel_id)
+
+        test_mask_paths = sorted(
+            list(test_dir.glob("*_masks.tiff")) +
+            list(test_dir.glob("*_masks.tif")) +
+            list(test_dir.glob("*_mask.tiff")) +
+            list(test_dir.glob("*_mask.tif"))
+        )
+
+        for img_path in test_image_paths:
+            base = img_path.stem
+
+            for m_path in test_mask_paths:
+                m_base = m_path.stem.replace('_masks', '').replace('_mask', '')
+                if m_base == base:
+                    test_images.append(tifffile.imread(img_path))
+                    test_labels.append(tifffile.imread(m_path))
+                    break
+
+    return images, labels, test_images, test_labels
