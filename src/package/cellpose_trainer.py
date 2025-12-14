@@ -61,7 +61,7 @@ def train_cellpose_model(
         image_paths,
         mask_paths,
         test_dir=test_dir,
-        channels=channels,
+        channel_id=channel_id,
     )
 
     print(f"Loaded {len(images)} training images and {len(labels)} training labels")
