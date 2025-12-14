@@ -90,6 +90,14 @@ def train_cellpose_model(
 
     images, labels, _, test_images, test_labels, _ = output
 
+    print(f"Loaded {len(images)} training images and {len(labels)} training labels")
+    if not labels:
+        print("ERROR: No labels (masks) found by Cellpose loader!")
+        print("Check mask naming (should end with '_mask.tiff' or '_masks.tiff') and directory structure.")
+        print(f"Mask directory: {mask_dir}")
+        print(f"Sample mask files found: {mask_paths[:5]}")
+        raise ValueError("No training labels found. Ensure masks are properly named and placed.")
+
     model = models.CellposeModel(
         gpu=True,
         pretrained_model='cpsam', 
