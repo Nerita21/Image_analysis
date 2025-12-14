@@ -78,6 +78,8 @@ def train_cellpose_model(
         model_type=None,  # Will use the pretrained model
     )
 
+    train_channel = [0, 0] if channels == [0, 0] else channels
+
     # Train the model (new version)
     model_path, train_losses, test_losses = train.train_seg(
         model.net,
@@ -87,7 +89,7 @@ def train_cellpose_model(
         test_labels=test_labels,
         learning_rate=learning_rate,
         weight_decay=0.1,
-        channels=channels,
+        channel_axis= train_channel,
         batch_size=batch_size,
         n_epochs=n_epochs,
         model_name=model_name
