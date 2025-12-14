@@ -79,13 +79,23 @@ def train_cellpose_model(
     train_dir = str(image_dir.parent)
     test_dir = str(test_dir) if test_dir else None
 
-    output = io.load_train_test_data(
-        train_dir=train_dir,
-        test_dir= test_dir,
-        image_filter=ch_pattern,
-        mask_filter="_masks",   # matches *_mask*, *_masks*
-        look_one_level_down=True
-    )
+    print(f"Attempting to load data from train_dir: {train_dir}, test_dir: {test_dir}")
+    print(f"image_filter: {ch_pattern}, mask_filter: _masks, look_one_level_down: True")
+
+    try:
+        output = io.load_train_test_data(
+            train_dir=train_dir,
+            test_dir= test_dir,
+            image_filter=ch_pattern,
+            mask_filter="_masks",   # exact match for *_masks* files
+            look_one_level_down=True
+        )
+        print("load_train_test_data succeeded")
+    except Exception as e:
+        print(f"load_train_test_data failed with error: {e}")
+        print("Check directory structure and file naming.")
+        raise
+
     print(f"Cellpose loader training directory: {train_dir}")
 
     images, labels, _, test_images, test_labels, _ = output
