@@ -83,7 +83,7 @@ def train_cellpose_model(
         train_dir=train_dir,
         test_dir= test_dir,
         image_filter=ch_pattern,
-        mask_filter="_mask",   # matches *_mask*, *_masks*
+        mask_filter="_masks",   # matches *_mask*, *_masks*
         look_one_level_down=True
     )
     print(f"Cellpose loader training directory: {train_dir}")
