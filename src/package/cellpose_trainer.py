@@ -40,6 +40,7 @@ def train_cellpose_model(
         list(mask_dir.glob("*_mask.tiff")) +
         list(mask_dir.glob("*_mask.tif"))
     )
+    test_paths = get_image_paths(test_dir, channel_id) if test_dir else None
     
 
     if not image_paths:
@@ -60,7 +61,7 @@ def train_cellpose_model(
     images, labels, test_images, test_labels = load_paired_images_and_masks(
         image_paths,
         mask_paths,
-        test_dir=test_dir,
+        test_dir=test_paths,
         channel_id=channel_id,
     )
 
@@ -80,6 +81,9 @@ def train_cellpose_model(
 
     train_channel = [0, 0] if channels == [0, 0] else channels
 
+    # For single channel, channel_axis should be None
+    channel_axis_param = None if channels == [0, 0] else train_channel
+
     # Train the model (new version)
     model_path, train_losses, test_losses = train.train_seg(
         model.net,
@@ -89,7 +93,7 @@ def train_cellpose_model(
         test_labels=test_labels,
         learning_rate=learning_rate,
         weight_decay=0.1,
-        channel_axis= train_channel,
+        channel_axis=channel_axis_param,
         batch_size=batch_size,
         n_epochs=n_epochs,
         model_name=model_name
@@ -210,5 +214,10 @@ def load_paired_images_and_masks(
                     test_images.append(tifffile.imread(img_path))
                     test_labels.append(tifffile.imread(m_path))
                     break
+
+    # If no test data, set to None to avoid index errors
+    if not test_images:
+        test_images = None
+        test_labels = None
 
     return images, labels, test_images, test_labels
