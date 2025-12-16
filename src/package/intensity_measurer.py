@@ -239,7 +239,7 @@ def extract_intensity_batch(
                     ch2 = tifffile.imread(ch2_file)
 
                 # Find and load cytoplasmic mask: try _ch1_masks, then _masks
-                cyto_mask_patterns = ["_ch1_masks", "_masks"]
+                cyto_mask_patterns = ["_ch1_masks", "_masks", "_ch1_mask", "_mask"]
                 cyto_mask_file = None
                 tried_cyto_patterns = []
                 for pat in cyto_mask_patterns:
@@ -256,6 +256,7 @@ def extract_intensity_batch(
                 nuc_mask_patterns = []
                 if ch2 is not None:
                     nuc_mask_patterns.append("_ch2_masks")
+                    nuc_mask_patterns.append("_ch2_mask")
                 nuc_mask_patterns.append("_nuc_masks")
                 nuc_mask_file = None
                 tried_nuc_patterns = []

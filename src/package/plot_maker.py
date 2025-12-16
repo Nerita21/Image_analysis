@@ -2,88 +2,166 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 from pathlib import Path
+import numpy as np
 
 
 
-def plot_intensity_cyto(csv_file: Path, output_dir: Path):
+def plot_intensity_cyto(
+    csv_file: Path,
+    output_dir: Path,
+    error_type: str = "sd"  # "sd" or "sem"
+):
     """
-    Generate and save intensity distribution plots from CSV data.
+    Generate and save cytoplasmic intensity plots grouped by sample.
+
+    Each row in the CSV represents one image.
+    Bars show the mean intensity per sample.
+    Error bars show variation between images (SD or SEM).
 
     Args:
         csv_file (Path): Path to the CSV file containing intensity measurements.
         output_dir (Path): Directory to save the generated plots.
+        error_type (str): "sd" for standard deviation, "sem" for standard error.
     """
+
     # Load data
     data = pd.read_csv(csv_file)
 
     # Create output directory if it doesn't exist
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Plot settings
-    sns.set_style(style="whitegrid")
-    sns.set_palette("Set2")
+    # Group by sample (aggregate across images)
+    grouped = (
+        data
+        .groupby('sample_name')
+        .agg(
+            mean_intensity=('cytoplasmic_intensity_mean', 'mean'),
+            std_intensity=('cytoplasmic_intensity_mean', 'std'),
+            n_images=('cytoplasmic_intensity_mean', 'count')
+        )
+        .reset_index()
+    )
 
-   # Generate pboxplot for intensity distributions between samples
-    plt.figure(figsize=(10, 6))                                                         
-    sns.barplot(x='sample_name', y='cytoplasmic_intensity_mean', palette="deep", data=data)
-     # add SD error bars 
+    # Choose error bars
+    if error_type == "sd":
+        yerr = grouped['std_intensity']
+        error_label = "SD"
+    elif error_type == "sem":
+        yerr = grouped['std_intensity'] / np.sqrt(grouped['n_images'])
+        error_label = "SEM"
+    else:
+        raise ValueError("error_type must be 'sd' or 'sem'")
+
+    # Plot
+    plt.figure(figsize=(10, 6))
+    sns.set_style("whitegrid")
+    palette = sns.color_palette("Set2", n_colors=len(grouped))
+
+    sns.barplot(
+        x='sample_name',
+        y='mean_intensity',
+        data=grouped,
+        palette=palette
+    )
+
     plt.errorbar(
-        x=range(len(data)),
-        y=data['cytoplasmic_intensity_mean'],
-        yerr=data['cytoplasmic_intensity_std'],
+        x=range(len(grouped)),
+        y=grouped['mean_intensity'],
+        yerr=yerr,
         fmt='none',
         ecolor='black',
         capsize=5
     )
-    plt.title('Cytoplasmic ntensity Distribution by Sample')
+
+    plt.title(f'Cytoplasmic Intensity by Sample (mean ± {error_label})')
     plt.xlabel('Sample')
-    plt.ylabel('Intensity')
-    plt.xticks(rotation=0)
+    plt.ylabel('Mean Cytoplasmic Intensity')
+    plt.xticks(rotation=45)
     plt.tight_layout()
-    plot_path = output_dir / "Cytoplasm_intensity_distribution_boxplot.png"
+
+    plot_path = output_dir / f"Cytoplasm_intensity_by_sample_{error_label}.png"
     plt.savefig(plot_path)
     plt.close()
+
     print(f"Plot saved to {plot_path}")
 
-def plot_intensity_nuclei(csv_file: Path, output_dir: Path):
+def plot_intensity_nuclei(
+    csv_file: Path,
+    output_dir: Path,
+    error_type: str = "sd"  # "sd" or "sem"
+):
     """
-    Generate and save intensity distribution plots from CSV data.
+    Generate and save nuclei intensity plots grouped by sample.
+
+    Each row in the CSV represents one image.
+    Bars show the mean intensity per sample.
+    Error bars show variation between images (SD or SEM).
 
     Args:
         csv_file (Path): Path to the CSV file containing intensity measurements.
         output_dir (Path): Directory to save the generated plots.
+        error_type (str): "sd" for standard deviation, "sem" for standard error.
     """
+
     # Load data
     data = pd.read_csv(csv_file)
 
     # Create output directory if it doesn't exist
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Plot settings
-    sns.set_style(style="whitegrid")
-    sns.set_palette("Set2")
+    # Group by sample (aggregate across images)
+    grouped = (
+        data
+        .groupby('sample_name')
+        .agg(
+            mean_intensity=('nuclear_intensity_mean', 'mean'),
+            std_intensity=('nuclear_intensity_mean', 'std'),
+            n_images=('nuclear_intensity_mean', 'count')
+        )
+        .reset_index()
+    )
 
+    # Choose error bars
+    if error_type == "sd":
+        yerr = grouped['std_intensity']
+        error_label = "SD"
+    elif error_type == "sem":
+        yerr = grouped['std_intensity'] / np.sqrt(grouped['n_images'])
+        error_label = "SEM"
+    else:
+        raise ValueError("error_type must be 'sd' or 'sem'")
 
-   # Generate pboxplot for intensity distributions between samples
+    # Plot
     plt.figure(figsize=(10, 6))
-    sns.barplot(x='sample_name', y='nuclear_intensity_mean', palette="deep", data=data)
-     # add SD error bars 
+    sns.set_style("whitegrid")
+    palette = sns.color_palette("Set2", n_colors=len(grouped))
+
+    sns.barplot(
+        x='sample_name',
+        y='mean_intensity',
+        data=grouped,
+        palette=palette
+    )
+
     plt.errorbar(
-        x=range(len(data)),
-        y=data['nuclear_intensity_mean'],
-        yerr=data['nuclear_intensity_std'],
+        x=range(len(grouped)),
+        y=grouped['mean_intensity'],
+        yerr=yerr,
         fmt='none',
         ecolor='black',
         capsize=5
     )
-    plt.title('Nuclear intensity Distribution by Sample')
+
+    plt.title(f'Nuclear Intensity by Sample (mean ± {error_label})')
     plt.xlabel('Sample')
-    plt.ylabel('Intensity')
-    plt.xticks(rotation=0)
+    plt.ylabel('Mean Nuclear Intensity')
+    plt.xticks(rotation=45)
     plt.tight_layout()
-    plot_path = output_dir / "Nuclear_intensity_distribution_boxplot.png"
+
+    plot_path = output_dir / f"Nuclear_intensity_by_sample_{error_label}.png"
     plt.savefig(plot_path)
     plt.close()
+
     print(f"Plot saved to {plot_path}")
 
 def plot_intensity_ratio(csv_file: Path, output_dir: Path):
