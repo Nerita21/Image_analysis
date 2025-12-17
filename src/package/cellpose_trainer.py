@@ -4,13 +4,14 @@ from pathlib import Path
 import numpy as np
 import tifffile
 from cellpose import models, io, train
+from skimage.measure import label
 
 def train_cellpose_model(
     image_dir: Path,
     mask_dir: Path,
     test_dir: Path = None,
     model_name: str = "custom_cellpose_model",
-    channels: list = [0, 0],  # [cyto_channel, nuc_channel]
+    channels: list = [0, 0],  
     channel_id: str = None,
     n_epochs: int = 100,
     learning_rate: float = 1e-5,
@@ -218,3 +219,30 @@ def load_paired_images_and_masks(
         test_labels = None
 
     return images, labels, test_images, test_labels
+
+def process_mask_for_cellpose(mask: np.ndarray) -> np.ndarray:
+    """
+    Prepare instance mask for Cellpose training.
+    - Removes border-touching objects
+    - Relabels instances consecutively starting from 1
+    """
+    mask = mask.astype(np.int32)
+
+    # Identify border-touching labels
+    border_labels = np.unique(np.concatenate([
+        mask[0, :],
+        mask[-1, :],
+        mask[:, 0],
+        mask[:, -1]
+    ]))
+    border_labels = border_labels[border_labels > 0]
+
+    # Remove border objects
+    mask_clean = mask.copy()
+    for b in border_labels:
+        mask_clean[mask_clean == b] = 0
+
+    # Relabel consecutively
+    mask_clean = label(mask_clean > 0, connectivity=2).astype(np.uint16)
+
+    return mask_clean
