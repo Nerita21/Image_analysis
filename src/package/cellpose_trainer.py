@@ -11,10 +11,10 @@ def train_cellpose_model(
     mask_dir: Path,
     test_dir: Path = None,
     model_name: str = "custom_cellpose_model",
-    channels: list = [0, 0],  
     channel_id: str = None,
+    gpu: bool = True,
     n_epochs: int = 100,
-    learning_rate: float = 1e-5,
+    learning_rate: float = 1e-3,
     batch_size: int = 1,
 ) -> models.CellposeModel:
     """
@@ -24,8 +24,8 @@ def train_cellpose_model(
         image_dir (Path): Directory containing training images (.tiff files)
         mask_dir (Path): Directory containing corrected masks (*_masks.tiff files)
         model_name (str): Name for your trained model (saved to models/model_name)
-        channels (list): [cyto_channel, nuclear_channel] (typically [1, 2])
-                        Set to [0, 0] for single-channel training
+        test_dir (Path, optional): Directory with test images and masks for validation
+        channel_id (str, optional): Channel identifier in filenames (e.g., "ch2")
         n_epochs (int): Number of training epochs (100-500 recommended)
         learning_rate (float): Learning rate for training (0.1 is default)
         batch_size (int): Batch size (default 8, reduce if OOM)
@@ -75,13 +75,26 @@ def train_cellpose_model(
         raise ValueError("No training labels found. Ensure masks are properly named and placed.")
 
     model = models.CellposeModel(
-        gpu=True,
+        gpu=gpu,
         pretrained_model='cpsam', 
         model_type=None,  # Will use the pretrained model
     )
 
-    train_channel = [0, 0] if channels == [0, 0] else channels
+    # Preprocess masks to remove border objects and relabel
+    labels = [process_mask_for_cellpose(label) for label in labels]
 
+    pairs = [
+        (img, lbl)
+        for img, lbl in zip(images, labels)
+        if lbl is not None and lbl.max() > 0
+    ]
+
+    if not pairs:
+        raise ValueError("All training masks are empty after preprocessing")
+
+    images, labels = zip(*pairs)
+
+    batch_size = min(batch_size, len(images))
    
     # Train the model (new version)
     model_path, train_losses, test_losses = train.train_seg(
@@ -106,7 +119,6 @@ def get_image_paths(image_dir: Path, channel_id: str = None):
 
     Examples:
         channel_id="ch2"  -> *_ch2.tif*
-        channel_id="bz"   -> *bz*.tif*
         channel_id=None   -> all .tif/.tiff files
     """
 
@@ -188,31 +200,31 @@ def load_paired_images_and_masks(
         raise ValueError("No paired image-mask data found. Check naming conventions.")
 
     # ---- Load test images and masks (optional) ----
-    test_images = []
-    test_labels = []
+    if test_dir is not None:
+        test_images = []
+        test_labels = []
 
-    if test_dir and Path(test_dir).exists():
-        test_dir = Path(test_dir)
+        if test_dir and Path(test_dir).exists():
+            test_dir = Path(test_dir)
 
-        test_image_paths = get_image_paths(test_dir, channel_id)
+            test_image_paths = get_image_paths(test_dir, channel_id)
+            test_mask_paths = sorted(
+                list(test_dir.glob("*_masks.tiff")) +
+                list(test_dir.glob("*_masks.tif")) +
+                list(test_dir.glob("*_mask.tiff")) +
+                list(test_dir.glob("*_mask.tif"))
+            )
 
-        test_mask_paths = sorted(
-            list(test_dir.glob("*_masks.tiff")) +
-            list(test_dir.glob("*_masks.tif")) +
-            list(test_dir.glob("*_mask.tiff")) +
-            list(test_dir.glob("*_mask.tif"))
-        )
+            test_mask_dict = {
+                m.stem.replace('_masks', '').replace('_mask', ''): m
+                for m in test_mask_paths
+            }
 
-        for img_path in test_image_paths:
-            base = img_path.stem
-
-            for m_path in test_mask_paths:
-                m_base = m_path.stem.replace('_masks', '').replace('_mask', '')
-                if m_base == base:
+            for img_path in test_image_paths:
+                base = img_path.stem
+                if base in test_mask_dict:
                     test_images.append(tifffile.imread(img_path))
-                    test_labels.append(tifffile.imread(m_path))
-                    break
-
+                    test_labels.append(tifffile.imread(test_mask_dict[base]))
     # If no test data, set to None to avoid index errors
     if not test_images:
         test_images = None
@@ -246,3 +258,6 @@ def process_mask_for_cellpose(mask: np.ndarray) -> np.ndarray:
     mask_clean = label(mask_clean > 0, connectivity=2).astype(np.uint16)
 
     return mask_clean
+
+
+
