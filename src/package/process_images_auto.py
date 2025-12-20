@@ -3,7 +3,7 @@ from utils import load_config
 from package import process_image_batch
 from cellpose import models
 from pathlib import Path
-from tifffile import t
+import tifffile
 
 def run_intensity_pipeline(image_dir: str, output_csv: str, model_name: str):
     """
