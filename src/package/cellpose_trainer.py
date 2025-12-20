@@ -41,7 +41,7 @@ def train_cellpose_model(
         list(mask_dir.glob("*_mask.tiff")) +
         list(mask_dir.glob("*_mask.tif"))
     )
-    test_paths = get_image_paths(test_dir, channel_id) if test_dir else None
+    
     
 
     if not image_paths:
@@ -62,7 +62,7 @@ def train_cellpose_model(
     images, labels, test_images, test_labels = load_paired_images_and_masks(
         image_paths,
         mask_paths,
-        test_dir=test_paths,
+        test_dir=test_dir,
         channel_id=channel_id,
     )
 
